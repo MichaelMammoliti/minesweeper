@@ -1,0 +1,31 @@
+.mine-grid {
+  display: block;
+  margin: auto;
+  display: table;
+
+  &-column {
+    display: block;
+    flex: 0 1 auto;
+  }
+
+  &-row {
+    display: flex;
+  }
+}
+
+.mine-cell {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #eee;
+
+  &-dark {
+    background: #ddd;
+  }
+
+  &-visible {
+    background: #fff;
+  }
+}
