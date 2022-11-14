@@ -1,16 +1,43 @@
+$blue-light: #f4faff;
+$blue: #45a6ff;
+$green: #2ae252;
+$green-light: #dfffe6;
+$red: #ff3d3d;
+$red-light: #ffe0e0;
+$purple: #c345ff;
+$purple-light: #f2e3fa;
+$yellow: #ffbc00;
+$yellow-light: #fff8df;
+$orange: #ff8845;
+$orange-light: #fff3ec;
+$lime: #a2ff45;
+$lime-light: #f1ffe3;
+$pink: #ff45b5;
+$pink-light: #ffe2f4;
+
+$cell-color-blue: #beffff;
+$cell-color-blue-dark: #83e8e8;
+$cell-color-bomb: #fc274d;
+$cell-color-flag: #12afe1;
+
+.row {
+  display: flex;
+  flex-wrap: nowrap;
+  flex-direction: row;
+  gap: 2px;
+
+  &-direction-column {
+    flex-direction: column;
+  }
+}
+
+.column {
+  flex: 0 1 auto;
+}
+
 .mine-grid {
-  display: block;
   margin: auto;
   display: table;
-
-  &-column {
-    display: block;
-    flex: 0 1 auto;
-  }
-
-  &-row {
-    display: flex;
-  }
 }
 
 .mine-cell {
@@ -19,13 +46,71 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #eee;
+  background: $cell-color-blue;
+  border-radius: 4px;
+  font-size: 16px;
+  font-weight: bold;
 
   &-dark {
-    background: #ddd;
+    background: $cell-color-blue-dark;
   }
 
   &-visible {
     background: #fff;
+  }
+
+  &-bomb {
+    background: $cell-color-bomb;
+    fill: white;
+  }
+
+  &-flag {
+    background: $cell-color-flag;
+    fill: white;
+  }
+
+  &-0 {
+    background: transparent;
+    color: transparent;
+  }
+
+  &-1 {
+    background: $blue-light;
+    color: $blue;
+  }
+
+  &-2 {
+    background: $green-light;
+    color: $green;
+  }
+
+  &-3 {
+    background: $red-light;
+    color: $red;
+  }
+
+  &-4 {
+    background: $purple-light;
+    color: $purple;
+  }
+
+  &-5 {
+    background: $yellow-light;
+    color: $yellow;
+  }
+
+  &-6 {
+    background: $orange-light;
+    color: $orange;
+  }
+
+  &-7 {
+    background: $lime-light;
+    color: $lime;
+  }
+
+  &-8 {
+    background: $pink-light;
+    color: $pink;
   }
 }

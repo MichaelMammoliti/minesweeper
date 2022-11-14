@@ -1,6 +1,8 @@
 import clsx from "clsx";
 import { chunk, shuffle } from "lodash";
 import { useEffect, useState } from "react";
+import { Bomb } from "./bomb";
+import { Flag } from "./flag";
 
 import styles from "./styles.scss";
 
@@ -39,7 +41,7 @@ const buildMine = (
   const totalCells = rowSize * columnSize;
   const newMinesCount = getMinePercentage(minesCount, difficulty, totalCells);
 
-  const mines = [...Array(newMinesCount)].map(() => "x");
+  const mines = [...Array(newMinesCount)].map(() => "bomb");
   const cells = [...Array(totalCells - newMinesCount)].map(() => 0);
 
   const shuffled = shuffle([...mines, ...cells]);
@@ -47,7 +49,7 @@ const buildMine = (
 
   return chunked.map((row, rowIndex) => {
     return row.map((column, columnIndex) => {
-      if (column === "x") {
+      if (column === "bomb") {
         return column;
       }
 
@@ -75,77 +77,171 @@ const buildMine = (
       };
 
       const count = Object.values(minesAround).reduce((acc: number, item) => {
-        if (item === "x") {
+        if (item === "bomb") {
           acc = acc + 1;
         }
 
         return acc;
       }, 0);
 
-      return count;
+      return `${count}`;
     });
   });
 };
 
 interface MineCellProps {
-  children: string;
   dark: boolean;
-  onClick: React.MouseEventHandler<HTMLButtonElement>;
+  onClick: () => void;
+  onRightClick: () => void;
+  value: string;
+  visible: boolean;
+  isGameOver: boolean;
 }
 
-export const MineCell = ({ onClick, children, dark }: MineCellProps) => {
+export const clone = (value: any) => {
+  return JSON.parse(JSON.stringify(value));
+};
+
+export const MineCell = ({
+  value,
+  isGameOver,
+  onClick,
+  onRightClick,
+  visible,
+  dark,
+}: MineCellProps) => {
+  const isMine = value === "bomb";
+  const isFlag = value === "flag";
+
+  const handleContextMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    onRightClick();
+  };
+  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+
+    onClick();
+  };
+
   return (
     <button
       className={clsx(styles["mine-cell"], {
-        [styles["mine-cell-visible"]]: !!children,
+        [styles["mine-cell-visible"]]: visible,
         [styles["mine-cell-dark"]]: dark,
+        [styles[`mine-cell-${value}`]]: visible && !!value,
+        [styles[`mine-cell-bomb`]]: isGameOver && isMine,
+        [styles[`mine-cell-flag`]]: visible && isFlag,
       })}
-      onClick={onClick}
+      onClick={handleClick}
+      onContextMenu={handleContextMenu}
     >
-      {children}
+      {isMine && isGameOver && <Bomb />}
+
+      {isFlag && <Flag />}
+
+      {!isMine && !isFlag && visible && value}
     </button>
   );
 };
 
 export const MineGrid = () => {
-  const [visibleCells, setVisibleCells] = useState([]);
-  const [mines, setMines] = useState<(string | number)[][]>([]);
+  const [visibleGrid, setVisibleGrid] = useState<string[][]>([]);
+  const [grid, setGrid] = useState<string[][]>([]);
+  const [isGameOver, setIsGameOver] = useState(false);
+
+  const newGame = () => {
+    const newGrid = buildMine(undefined, "easy", 10, 10);
+    const newVisibleGrid = newGrid.map((row) => row.map(() => ""));
+
+    setVisibleGrid(newVisibleGrid);
+    setIsGameOver(false);
+    setGrid(newGrid);
+  };
 
   useEffect(() => {
-    const builtMines = buildMine(undefined, "easy", 25, 25);
-    const uncoveredCells = builtMines.map((row) => row.map(() => false));
-
-    setVisibleCells(uncoveredCells);
-    setMines(builtMines);
+    newGame();
   }, []);
 
   const handleCellClick = (rowIndex: number, columnIndex: number) => () => {
-    const newVisibleCells = JSON.parse(
-      JSON.stringify(visibleCells)
-    ) as boolean[][];
+    if (isGameOver) {
+      return;
+    }
 
-    newVisibleCells[rowIndex][columnIndex] = true;
+    if (visibleGrid[rowIndex][columnIndex]) {
+      return;
+    }
 
-    setVisibleCells(newVisibleCells);
+    let newVisibleGrid = clone(visibleGrid) as string[][];
+    const newIsGameOver = grid[rowIndex][columnIndex] === "bomb";
+
+    newVisibleGrid[rowIndex][columnIndex] = `${grid[rowIndex][columnIndex]}`;
+
+    if (newIsGameOver) {
+      newVisibleGrid = newVisibleGrid.map((row, rowIndex) =>
+        row.map((column, columnIndex) => {
+          if (grid[rowIndex][columnIndex] === "bomb") {
+            return "bomb";
+          }
+
+          return column;
+        })
+      );
+    }
+
+    setIsGameOver(newIsGameOver);
+    setVisibleGrid(newVisibleGrid);
+  };
+
+  const handleRightClick = (rowIndex: number, columnIndex: number) => () => {
+    if (visibleGrid[rowIndex][columnIndex]) {
+      return;
+    }
+
+    const newVisibleGrid = clone(visibleGrid) as string[][];
+
+    newVisibleGrid[rowIndex][columnIndex] = "flag";
+
+    console.log(newVisibleGrid);
+
+    setVisibleGrid(newVisibleGrid);
+  };
+
+  const handleRestartButtonClick = () => {
+    newGame();
   };
 
   return (
-    <div className={styles["mine-grid"]}>
-      {mines.map((row, rowIndex) => (
-        <div key={rowIndex} className={styles["mine-grid-row"]}>
-          {row.map((column, columnIndex) => (
-            <div className={styles["mine-grid-column"]} key={columnIndex}>
-              <MineCell
-                onClick={handleCellClick(rowIndex, columnIndex)}
-                dark={(rowIndex + columnIndex) % 2 === 0}
-              >
-                {Boolean(visibleCells?.[rowIndex]?.[columnIndex]) &&
-                  `${column}`}
-              </MineCell>
+    <div>
+      <div className={styles["mine-grid"]}>
+        <div className={`${styles["row"]} ${styles["row-direction-column"]}`}>
+          {grid.map((row, rowIndex) => (
+            <div className={styles["column"]} key={rowIndex}>
+              <div className={styles["row"]}>
+                {row.map((column, columnIndex) => (
+                  <div className={styles["column"]} key={columnIndex}>
+                    <MineCell
+                      onClick={handleCellClick(rowIndex, columnIndex)}
+                      onRightClick={handleRightClick(rowIndex, columnIndex)}
+                      dark={(rowIndex + columnIndex) % 2 === 0}
+                      value={visibleGrid?.[rowIndex]?.[columnIndex]}
+                      visible={!!visibleGrid?.[rowIndex]?.[columnIndex]}
+                      isGameOver={isGameOver}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
-      ))}
+      </div>
+
+      {isGameOver && (
+        <div>
+          <div>game over</div>
+          <button onClick={handleRestartButtonClick}>restart</button>
+        </div>
+      )}
     </div>
   );
 };
