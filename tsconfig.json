@@ -4,18 +4,19 @@
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "jsx": "react-jsx",
-    "module": "commonjs",
+    "module": "ESNext",
     "moduleResolution": "node",
     "noImplicitAny": true,
     "resolveJsonModule": true,
-    "sourceMap": true,
+    "removeComments": true,
+    "sourceMap": false,
     "target": "ES2019",
     "declaration": false,
+    "skipLibCheck": true,
+    "lib": ["es2022", "dom"],
     "paths": {
       "@components": ["./src/components"]
-    },
-    "plugins": [{ "name": "typescript-plugin-css-modules" }]
+    }
   },
-  "include": ["src/**/*.ts", "declaration.d.ts"],
-  "exclude": ["dist", "node_modules", "**/*.test.ts"]
+  "exclude": ["dist", "node_modules", "**/*.stories.tsx"]
 }

@@ -1,47 +1,69 @@
-import clsx from "clsx";
-import { chunk, shuffle } from "lodash";
-import { useEffect, useState } from "react";
-import { Bomb } from "./bomb";
-import { Flag } from "./flag";
+import clsx from 'clsx';
+import { chunk, shuffle } from 'lodash';
+import { useEffect, useState } from 'react';
+import { Bomb } from './bomb';
+import { Flag } from './flag';
 
-import styles from "./styles.scss";
+import styles from './styles.scss';
 
-const getMinePercentage = (
+type Difficulty = 'easy' | 'medium' | 'hard';
+
+const minesMap = {
+  easy: 15,
+  medium: 25,
+  hard: 40,
+};
+
+const getMineCount = (
   minesCount: number | undefined,
-  difficulty: string,
+  difficulty: Difficulty,
   totalCells: number
 ) => {
-  if (typeof minesCount !== "undefined") {
+  if (typeof minesCount !== 'undefined') {
     return minesCount;
   }
 
-  let percentageOfMines = 0;
+  return Math.floor((totalCells / 100) * minesMap[difficulty]);
+};
 
-  if (difficulty === "easy") {
-    percentageOfMines = 10;
-  }
+type CellValue = string | number;
 
-  if (difficulty === "medium") {
-    percentageOfMines = 15;
-  }
+const getCellSurroundings = (grid: CellValue[][], coordinates: number[]) => {
+  const [row, column] = coordinates;
+  const prevRow = grid[row - 1];
+  const nextRow = grid[row + 1];
 
-  if (difficulty === "hard") {
-    percentageOfMines = 20;
-  }
+  const topLeft = prevRow?.[column - 1];
+  const top = prevRow?.[column];
+  const topRight = prevRow?.[column + 1];
+  const left = grid[row]?.[column - 1];
+  const right = grid[row]?.[column + 1];
+  const bottomLeft = nextRow?.[column - 1];
+  const bottom = nextRow?.[column];
+  const bottomRight = nextRow?.[column + 1];
 
-  return Math.floor((totalCells / 100) * percentageOfMines);
+  return {
+    topLeft: { coordinates: [row - 1, column - 1], value: topLeft },
+    top: { coordinates: [row - 1, column], value: top },
+    topRight: { coordinates: [row - 1, column + 1], value: topRight },
+    left: { coordinates: [row, column - 1], value: left },
+    right: { coordinates: [row, column + 1], value: right },
+    bottomLeft: { coordinates: [row + 1, column - 1], value: bottomLeft },
+    bottom: { coordinates: [row + 1, column], value: bottom },
+    bottomRight: { coordinates: [row + 1, column + 1], value: bottomRight },
+  };
 };
 
 const buildMine = (
   minesCount: number,
-  difficulty: string,
+  difficulty: Difficulty,
   rowSize: number,
   columnSize: number
 ) => {
   const totalCells = rowSize * columnSize;
-  const newMinesCount = getMinePercentage(minesCount, difficulty, totalCells);
+  const newMinesCount = getMineCount(minesCount, difficulty, totalCells);
 
-  const mines = [...Array(newMinesCount)].map(() => "bomb");
+  const mines = [...Array(newMinesCount)].map(() => 'bomb');
   const cells = [...Array(totalCells - newMinesCount)].map(() => 0);
 
   const shuffled = shuffle([...mines, ...cells]);
@@ -49,35 +71,17 @@ const buildMine = (
 
   return chunked.map((row, rowIndex) => {
     return row.map((column, columnIndex) => {
-      if (column === "bomb") {
+      if (column === 'bomb') {
         return column;
       }
 
-      const prevRow = chunked[rowIndex - 1];
-      const nextRow = chunked[rowIndex + 1];
+      const surroundings = getCellSurroundings(chunked, [
+        rowIndex,
+        columnIndex,
+      ]);
 
-      const topLeft = prevRow?.[columnIndex - 1];
-      const top = prevRow?.[columnIndex];
-      const topRight = prevRow?.[columnIndex + 1];
-      const left = chunked[rowIndex]?.[columnIndex - 1];
-      const right = chunked[rowIndex]?.[columnIndex + 1];
-      const bottomLeft = nextRow?.[columnIndex - 1];
-      const bottom = nextRow?.[columnIndex];
-      const bottomRight = nextRow?.[columnIndex + 1];
-
-      const minesAround = {
-        topLeft,
-        top,
-        topRight,
-        left,
-        right,
-        bottomLeft,
-        bottom,
-        bottomRight,
-      };
-
-      const count = Object.values(minesAround).reduce((acc: number, item) => {
-        if (item === "bomb") {
+      const count = Object.values(surroundings).reduce((acc: number, item) => {
+        if (item.value === 'bomb') {
           acc = acc + 1;
         }
 
@@ -98,10 +102,6 @@ interface MineCellProps {
   isGameOver: boolean;
 }
 
-export const clone = (value: any) => {
-  return JSON.parse(JSON.stringify(value));
-};
-
 export const MineCell = ({
   value,
   isGameOver,
@@ -110,8 +110,8 @@ export const MineCell = ({
   visible,
   dark,
 }: MineCellProps) => {
-  const isMine = value === "bomb";
-  const isFlag = value === "flag";
+  const isMine = value === 'bomb';
+  const isFlag = value === 'flag';
 
   const handleContextMenu = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
@@ -126,9 +126,9 @@ export const MineCell = ({
 
   return (
     <button
-      className={clsx(styles["mine-cell"], {
-        [styles["mine-cell-visible"]]: visible,
-        [styles["mine-cell-dark"]]: dark,
+      className={clsx(styles['mine-cell'], {
+        [styles['mine-cell-visible']]: visible,
+        [styles['mine-cell-dark']]: dark,
         [styles[`mine-cell-${value}`]]: visible && !!value,
         [styles[`mine-cell-bomb`]]: isGameOver && isMine,
         [styles[`mine-cell-flag`]]: visible && isFlag,
@@ -145,14 +145,63 @@ export const MineCell = ({
   );
 };
 
+interface FreeCellsMap {
+  [key: string]: CellValue;
+}
+
+const recursivelyFindEmptySpaces = (
+  grid: string[][],
+  coordinates: number[],
+  freeCellsMap: FreeCellsMap = {}
+) => {
+  const cell = grid[coordinates[0]][coordinates[1]];
+
+  if (cell === 'bomb') {
+    return;
+  }
+
+  if (cell === undefined) {
+    return;
+  }
+
+  freeCellsMap[`${coordinates[0]}_${coordinates[1]}`] = cell;
+
+  const surroundings = getCellSurroundings(grid, coordinates);
+
+  const surroundingsValues = Object.values(surroundings);
+  const surroundingSafeCells = surroundingsValues.filter(
+    (item) => Boolean(item.value) && item.value !== 'bomb'
+  );
+
+  // const newFreeCellsMap = surroundingSafeCells.reduce((acc, item) => {
+  //   acc[`${item.coordinates[0]}_${item.coordinates[1]}`] = item.value;
+
+  //   return acc;
+  // }, freeCellsMap);
+
+  surroundingSafeCells.forEach((item) => {
+    if (freeCellsMap[`${item.coordinates[0]}_${item.coordinates[1]}`]) {
+      return;
+    }
+
+    if (cell !== '0') {
+      return;
+    }
+
+    recursivelyFindEmptySpaces(grid, item.coordinates, freeCellsMap);
+  });
+
+  return freeCellsMap;
+};
+
 export const MineGrid = () => {
   const [visibleGrid, setVisibleGrid] = useState<string[][]>([]);
   const [grid, setGrid] = useState<string[][]>([]);
   const [isGameOver, setIsGameOver] = useState(false);
 
   const newGame = () => {
-    const newGrid = buildMine(undefined, "easy", 10, 10);
-    const newVisibleGrid = newGrid.map((row) => row.map(() => ""));
+    const newGrid = buildMine(undefined, 'easy', 10, 10);
+    const newVisibleGrid = newGrid.map((row) => row.map(() => ''));
 
     setVisibleGrid(newVisibleGrid);
     setIsGameOver(false);
@@ -172,21 +221,32 @@ export const MineGrid = () => {
       return;
     }
 
-    let newVisibleGrid = clone(visibleGrid) as string[][];
-    const newIsGameOver = grid[rowIndex][columnIndex] === "bomb";
+    let newVisibleGrid = structuredClone(visibleGrid);
+    const newIsGameOver = grid[rowIndex][columnIndex] === 'bomb';
 
     newVisibleGrid[rowIndex][columnIndex] = `${grid[rowIndex][columnIndex]}`;
 
     if (newIsGameOver) {
       newVisibleGrid = newVisibleGrid.map((row, rowIndex) =>
         row.map((column, columnIndex) => {
-          if (grid[rowIndex][columnIndex] === "bomb") {
-            return "bomb";
+          if (grid[rowIndex][columnIndex] === 'bomb') {
+            return 'bomb';
           }
 
           return column;
         })
       );
+    } else {
+      const freeCells = recursivelyFindEmptySpaces(grid, [
+        rowIndex,
+        columnIndex,
+      ]);
+
+      Object.keys(freeCells).forEach((key) => {
+        const coordinates = key.split('_').map(Number);
+
+        newVisibleGrid[coordinates[0]][coordinates[1]] = String(freeCells[key]);
+      });
     }
 
     setIsGameOver(newIsGameOver);
@@ -194,15 +254,15 @@ export const MineGrid = () => {
   };
 
   const handleRightClick = (rowIndex: number, columnIndex: number) => () => {
-    if (visibleGrid[rowIndex][columnIndex]) {
+    const cell = visibleGrid[rowIndex][columnIndex];
+
+    if (cell && cell !== 'flag') {
       return;
     }
 
-    const newVisibleGrid = clone(visibleGrid) as string[][];
+    const newVisibleGrid = structuredClone(visibleGrid);
 
-    newVisibleGrid[rowIndex][columnIndex] = "flag";
-
-    console.log(newVisibleGrid);
+    newVisibleGrid[rowIndex][columnIndex] = cell === 'flag' ? '' : 'flag';
 
     setVisibleGrid(newVisibleGrid);
   };
@@ -213,13 +273,13 @@ export const MineGrid = () => {
 
   return (
     <div>
-      <div className={styles["mine-grid"]}>
-        <div className={`${styles["row"]} ${styles["row-direction-column"]}`}>
+      <div className={styles['mine-grid']}>
+        <div className={`${styles['row']} ${styles['row-direction-column']}`}>
           {grid.map((row, rowIndex) => (
-            <div className={styles["column"]} key={rowIndex}>
-              <div className={styles["row"]}>
+            <div className={styles['column']} key={rowIndex}>
+              <div className={styles['row']}>
                 {row.map((column, columnIndex) => (
-                  <div className={styles["column"]} key={columnIndex}>
+                  <div className={styles['column']} key={columnIndex}>
                     <MineCell
                       onClick={handleCellClick(rowIndex, columnIndex)}
                       onRightClick={handleRightClick(rowIndex, columnIndex)}

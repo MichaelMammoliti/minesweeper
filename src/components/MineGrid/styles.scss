@@ -15,8 +15,8 @@ $lime-light: #f1ffe3;
 $pink: #ff45b5;
 $pink-light: #ffe2f4;
 
-$cell-color-blue: #beffff;
-$cell-color-blue-dark: #83e8e8;
+$cell-color-blue: #144b92;
+$cell-color-blue-dark: darken($cell-color-blue, 10);
 $cell-color-bomb: #fc274d;
 $cell-color-flag: #12afe1;
 
@@ -24,7 +24,6 @@ $cell-color-flag: #12afe1;
   display: flex;
   flex-wrap: nowrap;
   flex-direction: row;
-  gap: 2px;
 
   &-direction-column {
     flex-direction: column;
@@ -38,6 +37,9 @@ $cell-color-flag: #12afe1;
 .mine-grid {
   margin: auto;
   display: table;
+  padding: 36px;
+  background: $cell-color-blue;
+  border-radius: 16px;
 }
 
 .mine-cell {
@@ -47,12 +49,11 @@ $cell-color-flag: #12afe1;
   justify-content: center;
   align-items: center;
   background: $cell-color-blue;
-  border-radius: 4px;
   font-size: 16px;
   font-weight: bold;
 
   &-dark {
-    background: $cell-color-blue-dark;
+    background: rgba(#000, 0.2);
   }
 
   &-visible {
@@ -70,7 +71,7 @@ $cell-color-flag: #12afe1;
   }
 
   &-0 {
-    background: transparent;
+    background: rgba(#fff, 0.5);
     color: transparent;
   }
 
